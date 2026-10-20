@@ -7,17 +7,19 @@
 <style>
   :root { color-scheme: light dark; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem 4rem;
-    line-height: 1.65; color: #1a1a1a; background: #ffffff;
+    line-height: 1.65; color: #1F221A; background: #F4F1E6;
   }
+  a { color: #6B5A2E; }
   @media (prefers-color-scheme: dark) {
-    body { color: #e8e8e8; background: #0d0d0d; }
-    a { color: #58e3d4; }
+    body { color: #EEF0E5; background: #1F211A; }
+    a { color: #D8C9A2; }
+    .updated { color: #A4A694; }
   }
   h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
   h2 { font-size: 1.15rem; margin-top: 2rem; }
-  .updated { color: #888; font-size: 0.9rem; margin-bottom: 2rem; }
+  .updated { color: #5E604F; font-size: 0.9rem; margin-bottom: 2rem; }
   ul { padding-left: 1.25rem; }
   li { margin: 0.35rem 0; }
 </style>
@@ -25,67 +27,101 @@
 <body>
 
 <h1>PRogress Privacy Policy</h1>
-<p class="updated">Effective date: July 14, 2026</p>
+<p class="updated">Effective date: October 20, 2026 (PRogress 1.4.2)</p>
 
-<p>PRogress ("the app") is a workout tracking app. This policy explains what
-information the app collects, how it is used, and the choices you have. We keep
-it short because the app's data practices are simple: your data exists to make
-the app work for you, and for nothing else.</p>
+<p>PRogress ("the app") is a workout tracker for people who lift. This policy
+explains what information the app collects, how it is used, and the choices you
+have. Your data exists to make the app work for you, and for nothing else.</p>
 
 <h2>Information we collect</h2>
 <ul>
-  <li><strong>Account information.</strong> When you create an account we store
-  your email address (used only for authentication) and, if you sign in with
-  Apple or Google, the account identifier those services provide.</li>
-  <li><strong>Profile information.</strong> The display name, username, and bio
-  you choose. Your username and display name are visible to other users of the
-  app (for example in search and the workout feed).</li>
-  <li><strong>Fitness and workout data.</strong> The workouts you log —
-  exercises, sets, weights, repetitions, duration, personal records, and any
-  notes you add.</li>
-  <li><strong>Social activity.</strong> Who you follow, and workouts you like.</li>
+  <li><strong>Account information.</strong> Your email address (used only to
+  sign you in; it is never shown to other users) and, if you sign in with Apple
+  or Google, the account identifier those services provide.</li>
+  <li><strong>Profile information.</strong> The display name, username and bio
+  you choose. Your display name and username are visible to other signed-in
+  users (for example in friend search and the Friends feed).</li>
+  <li><strong>Workouts and training data.</strong> The workouts you log —
+  exercises, sets, weights, repetitions, how hard a set felt (an optional
+  effort rating), duration and notes — plus your personal records, the
+  programs you build, your Coach goals, and which Coach sessions you
+  completed.</li>
+  <li><strong>Friends activity.</strong> Who you follow, workouts you give
+  kudos to, people you block, and any report you submit (the reason you
+  picked, the workout and the person reported).</li>
+  <li><strong>Optional Apple Health data.</strong> Only if you connect Apple
+  Health. See <a href="#apple-health">Apple Health</a> below.</li>
+</ul>
+
+<h2>Kept only on your device</h2>
+<ul>
+  <li>Your units, the bodyweight and sex you enter for Coach's strength
+  comparisons, rest-timer alerts and similar preferences.</li>
+  <li>Everything the app reads from Apple Health.</li>
 </ul>
 
 <h2>What we do NOT collect</h2>
 <ul>
-  <li>No advertising identifiers, no ad networks, and no third-party analytics
-  or tracking SDKs.</li>
-  <li>No location data.</li>
-  <li>No health data from Apple Health or other sources — only what you type
-  into the app.</li>
-  <li>No contacts, messages, or browsing history.</li>
+  <li>No advertising, no advertising identifiers, and no third-party analytics
+  or tracking SDKs. We do not track you across other companies' apps or
+  websites.</li>
+  <li>No location data, contacts, messages or browsing history.</li>
+</ul>
+
+<h2 id="apple-health">Apple Health</h2>
+<p>Connecting Apple Health is optional and needs your explicit permission,
+which you can change at any time in the Health app (tap your profile picture,
+then Apps → PRogress).</p>
+<ul>
+  <li><strong>Read:</strong> your latest bodyweight, heart-rate variability,
+  resting heart rate and recent sleep. These are used only on your device to
+  show recovery signals and to tailor Coach's guidance. They are not uploaded
+  to our servers.</li>
+  <li><strong>Write:</strong> completed strength workouts (time, duration,
+  the workout's title and your time zone). The first time you connect, the app
+  also copies your finished workouts from the last 30 days, once, so your
+  Health history is complete.</li>
+  <li>Apple Health data is never used for advertising or marketing, never sold,
+  and never shared with third parties.</li>
 </ul>
 
 <h2>How your information is used</h2>
 <ul>
-  <li>To provide the app's features: logging workouts, tracking personal
-  records, and the social feed.</li>
-  <li>Workouts you mark as public are visible to users who follow you. You can
-  make any workout private, and you can change the default in Settings.</li>
+  <li>To provide the app's features: logging workouts, tracking records and
+  progress, Coach plans, programs, and the Friends feed.</li>
+  <li>Coach's calculations run on your device from your own training
+  history. Coach gives general training guidance, not medical advice.</li>
+  <li>Workouts set to "Friends can see" are visible to people who follow you.
+  You can make any workout private, and you can change the default in
+  Settings.</li>
+  <li>Reports are reviewed by the developer to enforce the community rules,
+  which can include removing content or accounts.</li>
   <li>We do not sell your data, share it with advertisers, or use it for
   marketing.</li>
 </ul>
 
 <h2>Where your data is stored</h2>
-<p>Data is stored in Google Firebase (Authentication and Cloud Firestore),
-acting as our service provider. Google may process basic technical information
-(such as IP addresses) as part of operating these services securely. See
-<a href="https://firebase.google.com/support/privacy">Firebase's privacy
-documentation</a> for details. Access to your data is protected by security
-rules: only you can modify your own records.</p>
+<p>Account and training data is stored in Google Firebase (Authentication and
+Cloud Firestore), acting as our service provider. Google may process basic
+technical information (such as IP addresses) to operate these services
+securely; see <a href="https://firebase.google.com/support/privacy">Firebase's
+privacy documentation</a>. Security rules ensure only you can change your own
+records.</p>
 
 <h2>Sign in with Apple and Google</h2>
 <p>If you use Sign in with Apple or Google Sign-In, authentication is handled
-by Apple or Google respectively. The app receives only your account identifier
-and email address (with Apple, you may choose to hide your email). The app
-never sees your password for these services.</p>
+by Apple or Google. The app receives only your account identifier and email
+address (with Apple, you may choose to hide your email). The app never sees
+your password for these services.</p>
 
 <h2>Deleting your account and data</h2>
 <p>You can delete your account at any time in the app: <strong>Profile →
-Settings → Delete Account</strong>. This permanently deletes your account,
-profile, workouts, personal records, likes, and follows. If you signed in with
+Settings → Delete account</strong>. This permanently deletes your account,
+profile, workouts, personal records, programs, Coach goals and history,
+kudos, follows, blocks and the reports you submitted. If you signed in with
 Apple, the app also revokes its access to your Apple ID. Deletion is immediate
-and cannot be undone.</p>
+and cannot be undone. Workouts the app already wrote to Apple Health stay in
+Apple Health, where you can delete them yourself.</p>
 
 <h2>Children</h2>
 <p>PRogress is not directed at children under 13 (or the equivalent minimum age
