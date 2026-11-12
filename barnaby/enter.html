@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-2dul0OeGBs8kZ0DOvpkzgdYx6fTYBCg8p3yYQPBd+xQ='; style-src 'sha256-YH8Hc8e5OuKjT+vMZCGMP8+qYF3huoVjfufnNhPhfu0='; connect-src https://ntfy.sh; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark light">
+<title>Barnaby · secure entry</title>
+<style>
+:root { --bg: #0b0f14; --panel: #131a22; --line: #243140; --text: #e8eef5; --dim: #8fa1b3; --ion: #5cc8ff; --brass: #d9a84e; --bad: #ff6b6b; --ok: #4fd18b; }
+@media (prefers-color-scheme: light) { :root { --bg: #f4f6f9; --panel: #ffffff; --line: #d6dee8; --text: #0e1620; --dim: #5a6b7c; --ion: #0a7bc0; --brass: #9a6a12; } }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+main { max-width: 420px; margin: 0 auto; padding: 28px 18px 40px; }
+.mark { font: 600 12px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .18em; color: var(--ion); text-transform: uppercase; }
+h1 { font-size: 22px; margin: 10px 0 4px; }
+.who { color: var(--dim); margin: 0 0 18px; word-break: break-all; }
+.who b { color: var(--text); font-weight: 600; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+label { display: block; font-size: 13px; color: var(--dim); margin: 0 0 6px; }
+input { width: 100%; font: inherit; font-size: 17px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; outline: none; }
+input:focus { border-color: var(--ion); }
+.field { margin-bottom: 14px; }
+.row { display: flex; gap: 8px; }
+.row input { flex: 1; }
+button { font: inherit; font-weight: 600; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--text); padding: 12px 14px; }
+button.primary { width: 100%; background: var(--ion); border-color: var(--ion); color: #001522; margin-top: 4px; }
+button:disabled { opacity: .5; }
+.note { font-size: 13px; color: var(--dim); margin: 14px 2px 0; }
+.status { margin: 14px 2px 0; font-weight: 600; }
+.status.bad { color: var(--bad); }
+.status.ok { color: var(--ok); }
+.timer { font: 12px ui-monospace, "SF Mono", Menlo, monospace; color: var(--brass); margin-top: 10px; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <div class="mark">Barnaby · secure entry</div>
+  <h1 id="title">Enter your password</h1>
+  <p class="who" id="who">Checking the link…</p>
+  <form class="card hidden" id="form" autocomplete="off">
+    <div class="field" id="pwField">
+      <label for="pw">Password</label>
+      <div class="row">
+        <input id="pw" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="256">
+        <button type="button" id="show">Show</button>
+      </div>
+    </div>
+    <div class="field" id="codeField">
+      <label for="code" id="codeLabel">One-time code (optional)</label>
+      <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="32">
+    </div>
+    <button type="submit" class="primary" id="send">Send securely to your Mac</button>
+    <div class="timer" id="timer"></div>
+  </form>
+  <p class="status" id="status" role="status" aria-live="polite"></p>
+  <p class="note" id="note">This page seals what you type on this device with a one-time key only your Mac has. GitHub, the relay and Telegram can't read it, and Barnaby's AI never sees it.</p>
+</main>
+<script>
+(function (root) {
+  'use strict';
+  var VERSION = 1;
+  var LABEL = 'barnaby-entry-v1';
+  var MAX_PASSWORD = 256;
+  var MAX_CODE = 32;
+  var te = new TextEncoder();
+
+  function subtle() { return root.crypto.subtle; }
+
+  function b64u(bytes) {
+    var b = new Uint8Array(bytes), s = '';
+    for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+    return root.btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function unb64u(text) {
+    if (typeof text !== 'string' || !/^[A-Za-z0-9_-]*$/.test(text)) throw new Error('bad base64url');
+    var s = text.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = root.atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function isLoopback(host) { return host === '127.0.0.1' || host === 'localhost' || host === '[::1]'; }
+
+  // The link's fragment → checked parameters. Nothing here ever leaves the device.
+  function parseFragment(hash, nowMs) {
+    var q = new URLSearchParams(String(hash || '').replace(/^#/, ''));
+    function fail(why) { return { ok: false, error: why }; }
+    if (q.get('v') !== String(VERSION)) return fail('incomplete');
+    var p = { v: VERSION, k: q.get('k') || '', t: q.get('t') || '', n: q.get('n') || '', e: Number(q.get('e')),
+              s: (q.get('s') || '').toLowerCase(), u: q.get('u') || '', r: q.get('r') || '', m: q.get('m') || 'pw' };
+    try {
+      var key = unb64u(p.k);
+      if (key.length !== 65 || key[0] !== 4) return fail('incomplete');
+      if (unb64u(p.n).length !== 16) return fail('incomplete');
+    } catch (e) { return fail('incomplete'); }
+    if (!/^[A-Za-z0-9_-]{8,64}$/.test(p.t)) return fail('incomplete');
+    if (!/^[a-z0-9.-]{1,253}$/.test(p.s)) return fail('incomplete');
+    if (p.u.length > 200) return fail('incomplete');
+    if (p.m !== 'pw' && p.m !== 'code') return fail('incomplete');
+    if (!Number.isFinite(p.e)) return fail('incomplete');
+    var relay;
+    try { relay = new URL(p.r); } catch (e) { return fail('incomplete'); }
+    if (!(relay.protocol === 'https:' || (relay.protocol === 'http:' && isLoopback(relay.hostname)))) return fail('incomplete');
+    if (relay.search || relay.hash || relay.username || relay.password) return fail('incomplete');
+    p.r = relay.origin + relay.pathname.replace(/\/+$/, '');
+    if ((nowMs === undefined ? Date.now() : nowMs) >= p.e * 1000) return fail('expired');
+    return { ok: true, params: p };
+  }
+
+  function info(p) { return te.encode(LABEL + '|' + p.t + '|' + p.n + '|' + p.s); }
+
+  function rawFromJwk(jwk) {
+    var x = unb64u(jwk.x), y = unb64u(jwk.y), out = new Uint8Array(65);
+    out[0] = 4; out.set(x, 1); out.set(y, 33);
+    return out;
+  }
+
+  // {password, code} → the sealed message for the relay. opts.pageKeyJwk and
+  // opts.iv are only for test vectors; normally both are fresh and random.
+  async function seal(p, secret, opts) {
+    opts = opts || {};
+    var password = secret.password || '', code = (secret.code || '').trim();
+    if (password.length > MAX_PASSWORD || code.length > MAX_CODE) throw new Error('too long');
+    if (p.m === 'code' ? !code : !password) throw new Error('empty');
+    var ec = { name: 'ECDH', namedCurve: 'P-256' };
+    var macKey = await subtle().importKey('raw', unb64u(p.k), ec, false, []);
+    var mine, minePublic;
+    if (opts.pageKeyJwk) {
+      mine = await subtle().importKey('jwk', opts.pageKeyJwk, ec, false, ['deriveBits']);
+      minePublic = rawFromJwk(opts.pageKeyJwk);
+    } else {
+      var pair = await subtle().generateKey(ec, false, ['deriveBits']);
+      mine = pair.privateKey;
+      minePublic = new Uint8Array(await subtle().exportKey('raw', pair.publicKey));
+    }
+    var bits = await subtle().deriveBits({ name: 'ECDH', public: macKey }, mine, 256);
+    var ikm = await subtle().importKey('raw', bits, 'HKDF', false, ['deriveKey']);
+    var key = await subtle().deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: unb64u(p.n), info: info(p) },
+                                       ikm, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+    var iv = opts.iv ? new Uint8Array(opts.iv) : root.crypto.getRandomValues(new Uint8Array(12));
+    // Keys in sorted order, the same bytes Swift's .sortedKeys makes.
+    var body = {};
+    if (code) body.c = code;
+    body.n = p.n;
+    if (password) body.p = password;
+    body.s = p.s;
+    body.v = VERSION;
+    var plain = te.encode(JSON.stringify(body));
+    var sealed = new Uint8Array(await subtle().encrypt({ name: 'AES-GCM', iv: iv, additionalData: te.encode(p.t), tagLength: 128 }, key, plain));
+    plain.fill(0);
+    return '{"v":1,"pk":"' + b64u(minePublic) + '","iv":"' + b64u(iv) + '","ct":"' + b64u(sealed) + '"}';
+  }
+
+  function relayURL(p) { return p.r + '/' + encodeURIComponent(p.t); }
+
+  async function send(p, secret, opts) {
+    opts = opts || {};
+    if ((opts.now === undefined ? Date.now() : opts.now) >= p.e * 1000) throw new Error('expired');
+    var message = await seal(p, secret, opts);
+    var doFetch = opts.fetch || root.fetch.bind(root);
+    var res = await doFetch(relayURL(p), { method: 'POST', body: message, cache: 'no-store', credentials: 'omit',
+                                           referrerPolicy: 'no-referrer', mode: 'cors' });
+    if (!res.ok) throw new Error('relay ' + res.status);
+    return true;
+  }
+
+  root.BarnabyEntry = Object.freeze({ VERSION: VERSION, parseFragment: parseFragment, seal: seal, send: send,
+                                      relayURL: relayURL, b64u: b64u, unb64u: unb64u });
+
+  if (typeof document === 'undefined') return;
+
+  // ---- The page ----
+  function $(id) { return document.getElementById(id); }
+  var form = $('form'), pw = $('pw'), code = $('code'), status = $('status'), sendButton = $('send');
+  function say(text, kind) { status.textContent = text; status.className = 'status' + (kind ? ' ' + kind : ''); }
+  function wipe() { pw.value = ''; code.value = ''; }
+
+  if (root.top !== root.self) { $('who').textContent = 'This page can only be opened on its own.'; return; }
+  var parsed = parseFragment(root.location.hash);
+  // The fragment isn't needed in the address bar or history any more.
+  try { root.history.replaceState(null, '', root.location.pathname); } catch (e) {}
+  if (!parsed.ok) {
+    $('title').textContent = parsed.error === 'expired' ? 'This link has expired' : 'This link is incomplete';
+    $('who').textContent = parsed.error === 'expired' ? 'Ask Barnaby for a new one.' : 'Open the whole link from Barnaby’s message.';
+    return;
+  }
+  var p = parsed.params, done = false;
+  var who = $('who');
+  who.textContent = '';
+  who.appendChild(document.createTextNode(p.m === 'code' ? 'The code for ' : 'For '));
+  var u = document.createElement('b'); u.textContent = p.u || 'your account'; who.appendChild(u);
+  who.appendChild(document.createTextNode(' on '));
+  var s = document.createElement('b'); s.textContent = p.s; who.appendChild(s);
+  if (p.m === 'code') {
+    $('title').textContent = 'Enter your one-time code';
+    $('pwField').classList.add('hidden');
+    $('codeLabel').textContent = 'One-time code';
+  }
+  form.classList.remove('hidden');
+  (p.m === 'code' ? code : pw).focus();
+
+  $('show').addEventListener('click', function () {
+    var showing = pw.type === 'text';
+    pw.type = showing ? 'password' : 'text';
+    $('show').textContent = showing ? 'Show' : 'Hide';
+  });
+
+  function tick() {
+    if (done) return;
+    var left = Math.floor(p.e - Date.now() / 1000);
+    if (left <= 0) {
+      wipe(); form.classList.add('hidden');
+      $('title').textContent = 'This link has expired';
+      say('Nothing was sent. Ask Barnaby for a new link.', 'bad');
+      return;
+    }
+    $('timer').textContent = 'Expires in ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+    root.setTimeout(tick, 1000);
+  }
+  tick();
+
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    if (done) return;
+    var secret = { password: p.m === 'code' ? '' : pw.value, code: code.value };
+    if (p.m === 'code' ? !secret.code.trim() : !secret.password) { say(p.m === 'code' ? 'Enter the code first.' : 'Enter the password first.', 'bad'); return; }
+    sendButton.disabled = true;
+    say('Sealing and sending…');
+    try {
+      await send(p, secret);
+      done = true;
+      wipe();
+      secret.password = ''; secret.code = '';
+      form.classList.add('hidden');
+      $('title').textContent = 'Sent';
+      say('Sent. You can close this.', 'ok');
+    } catch (e) {
+      sendButton.disabled = false;
+      say(String(e && e.message) === 'expired' ? 'This link has expired.' : 'Couldn’t reach the relay. Check your connection and try again.', 'bad');
+    }
+  });
+  root.addEventListener('pagehide', wipe);
+})(globalThis);
+</script>
+</body>
+</html>
